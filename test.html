@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<!-- saved from url=(0037)https://pinch-zoom-element.glitch.me/ -->
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+    <!--script src="https://pinch-zoom-element.glitch.me/modules/pinch-zoom-element/dist/pinch-zoom.js"></script-->
+
+    <title>pinch-zoom</title>
+    <link rel="stylesheet" href="./pinch-zoom_files/all.css">
+
+    <script defer="" src="./dist/pinch-zoom.js"></script>
+
+    <style type="text/css">
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            display: blocK;
+
+
+            background-color: blueviolet;
+            height: 100%;
+        }
+
+        .input-container {
+            height: 110px;
+            width: 100%;
+        }
+
+        #image {
+            width: 100%;
+        }
+
+        #pinch-zoom {
+            width: 100%;
+            height: 100%;
+        }
+
+        .container {
+            position: relative;
+            box-shadow: inset 0 0 3px black;
+
+            width: 400px;
+            height: 600px;
+
+            margin-left: 100px;
+        }
+
+        .vertical-line {
+            position: absolute;
+            background-color: blue;
+            width: 1px;
+            height: 100%;
+            bottom: 0px;
+            left: 50%;
+            z-index: 999;
+        }
+
+        .horizontal-line {
+            position: absolute;
+            background-color: blue;
+            height: 1px;
+            width: 100%;
+            bottom: 0px;
+            top: 50%;
+            z-index: 999;
+        }
+    </style>
+</head>
+<body>
+<div class="input-container">
+    <button id="reset">Reset</button>
+    <button id="zoom">Zoom</button>
+</div>
+
+<div class="container" id="container">
+    <pinch-zoom id="pinch-zoom">
+        <img id="image" src="https://cdn.glitch.com/d824d0c2-e771-4c9f-9fe2-a66b3ac139c5%2Fcats.jpg?1541801135989">
+    </pinch-zoom>
+    <div class=vertical-line></div>
+    <div class=horizontal-line></div>
+</div>
+
+<script>
+    let reset = document.getElementById('reset');
+    let zoom = document.getElementById('zoom');
+
+    let image = document.getElementById('image');
+    let container = document.getElementById('container');
+
+    let pinchZoom = document.getElementById('pinch-zoom');
+
+    function removeElementsByClass(className){
+        const elements = document.getElementsByClassName(className);
+        while(elements.length > 0){
+            elements[0].parentNode.removeChild(elements[0]);
+        }
+    }
+
+    function resetPoints() {
+        removeElementsByClass('point');
+    }
+
+    function draw(x, y) {
+        var newDiv = document.createElement("div");
+
+        newDiv.classList.add('point');
+
+        newDiv.style.width = '4px';
+        newDiv.style.height = '4px';
+
+        newDiv.style.backgroundColor = 'red';
+
+        newDiv.style.position = 'fixed';
+        newDiv.style.left = x - 2 + 'px';
+        newDiv.style.top = y - 2 + 'px';
+
+        document.body.append(newDiv);
+
+        return newDiv;
+    }
+
+    let zoomLevel = 1;
+
+    reset.addEventListener('click', () => {
+        zoomLevel = 1;
+        pinchZoom.setTransform({
+            scale: zoomLevel,
+            x: 0,
+            y: 0
+        });
+    });
+
+    zoom.addEventListener('click', () => {
+        zoomLevel++;
+        pinchZoom.scaleTo(
+            zoomLevel,
+            {
+                originX: 200,
+                originY: 300,
+                relativeTo: 'container',
+                allowChangeEvent: true
+            }
+        );
+    });
+
+    pinchZoom.addEventListener('change', (event) => {
+        console.log('CHANGED: ', event);
+    });
+</script>
+</body>
+
+</html>

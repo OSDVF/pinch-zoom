@@ -232,7 +232,7 @@ var PinchZoom = (function () {
     function getAbsoluteValue(value, max) {
         if (typeof value === 'number')
             return value;
-        if (value.trimRight().endsWith('%')) {
+        if (value.trim().endsWith('%')) {
             return max * parseFloat(value) / 100;
         }
         return parseFloat(value);
@@ -276,7 +276,7 @@ var PinchZoom = (function () {
             this.addEventListener('wheel', event => this._onWheel(event));
         }
         static get observedAttributes() { return [minScaleAttr]; }
-        attributeChangedCallback(name, oldValue, newValue) {
+        async attributeChangedCallback(name, oldValue, newValue) {
             if (name === minScaleAttr) {
                 if (this.scale < this.minScale) {
                     this.setTransform({ scale: this.minScale });
@@ -475,26 +475,86 @@ var PinchZoom = (function () {
             });
         }
         /** Transform the view & fire a change event */
-        _applyChange(opts = {}) {
+        async _applyChange(opts = {}) {
             const { panX = 0, panY = 0, originX = 0, originY = 0, scaleDiff = 1, allowChangeEvent = false, } = opts;
-            const matrix = createMatrix()
-                // Translate according to panning.
-                .translate(panX, panY)
-                // Scale about the origin.
-                .translate(originX, originY)
-                // Apply current translate
-                .translate(this.x, this.y)
-                .scale(scaleDiff)
-                .translate(-originX, -originY)
-                // Apply current scale.
-                .scale(this.scale);
+            let matrix = createMatrix();
+            const scale = this.scale;
+            const x = this.x;
+            const y = this.y;
+            console.log('Translate (panX, panY)', panX, panY);
+            matrix = matrix.translate(panX, panY);
+            this._applyMatrix(matrix, allowChangeEvent);
+            await this._sleep(600);
+            console.log('Translate (originX, originX)', originX, originX);
+            matrix = matrix.translate(originX, originY);
+            this._applyMatrix(matrix, allowChangeEvent);
+            await this._sleep(600);
+            console.log('Translate (x, y)', x, y);
+            matrix = matrix.translate(x, y);
+            this._applyMatrix(matrix, allowChangeEvent);
+            await this._sleep(600);
+            console.log('Scale (scaleDiff)', scaleDiff);
+            matrix = matrix.scale(scaleDiff);
+            this._applyMatrix(matrix, allowChangeEvent);
+            await this._sleep(600);
+            console.log('Translate (-originX, -originX)', -originX, -originX);
+            matrix = matrix.translate(-originX, -originY);
+            this._applyMatrix(matrix, allowChangeEvent);
+            await this._sleep(600);
+            console.log('Scale (scale)', scale);
+            matrix = matrix.scale(scale);
+            this._applyMatrix(matrix, allowChangeEvent);
+            await this._sleep(600);
+            /*
+            matrix = matrix.scale(scale);
+            this._applyMatrix(matrix, allowChangeEvent);
+            await this._sleep(1500);
+        
+            matrix = matrix.translate(-originX, -originY);
+            this._applyMatrix(matrix, allowChangeEvent);
+            await this._sleep(1500);
+        
+            matrix = matrix.scale(scaleDiff);
+            this._applyMatrix(matrix, allowChangeEvent);
+            await this._sleep(1500);
+        
+            matrix = matrix.translate(x, y);
+            this._applyMatrix(matrix, allowChangeEvent);
+            await this._sleep(1500);
+        
+            matrix = matrix.translate(originX, originY);
+            this._applyMatrix(matrix, allowChangeEvent);
+            await this._sleep(1500);
+        
+            matrix = matrix.translate(panX, panY);
+            this._applyMatrix(matrix, allowChangeEvent);
+            await this._sleep(1500);
+            */
+            /*
+              // Translate according to panning.
+              .translate(panX, panY)
+              // Scale about the origin.
+              .translate(originX, originY)
+              // Apply current translate
+              .translate(this.x, this.y)
+              .scale(scaleDiff)
+              .translate(-originX, -originY)
+              // Apply current scale.
+              .scale(this.scale);
+        
+             */
             // Convert the transform into basic translate & scale.
+        }
+        _applyMatrix(matrix, allowChangeEvent = false) {
             this.setTransform({
                 allowChangeEvent,
                 scale: matrix.a,
                 x: matrix.e,
                 y: matrix.f,
             });
+        }
+        _sleep(ms) {
+            console.log('TEST');
         }
     }
 

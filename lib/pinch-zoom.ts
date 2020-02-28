@@ -57,7 +57,7 @@ function getMidpoint(a: Point, b?: Point): Point {
 function getAbsoluteValue(value: string | number, max: number): number {
   if (typeof value === 'number') return value;
 
-  if (value.trimRight().endsWith('%')) {
+  if (value.trim().endsWith('%')) {
     return max * parseFloat(value) / 100;
   }
   return parseFloat(value);
@@ -116,10 +116,10 @@ export default class PinchZoom extends HTMLElement {
     this.addEventListener('wheel', event => this._onWheel(event));
   }
 
-  attributeChangedCallback(name: string, oldValue: string, newValue: string) {
+  async attributeChangedCallback(name: string, oldValue: string, newValue: string) {
     if (name === minScaleAttr) {
       if (this.scale < this.minScale) {
-        this.setTransform({scale: this.minScale});
+        this.setTransform({ scale: this.minScale });
       }
     }
   }
@@ -367,7 +367,7 @@ export default class PinchZoom extends HTMLElement {
   }
 
   /** Transform the view & fire a change event */
-  private _applyChange(opts: ApplyChangeOpts = {}) {
+  private async _applyChange(opts: ApplyChangeOpts = {}) {
     const {
       panX = 0, panY = 0,
       originX = 0, originY = 0,
@@ -375,7 +375,69 @@ export default class PinchZoom extends HTMLElement {
       allowChangeEvent = false,
     } = opts;
 
-    const matrix = createMatrix()
+    let matrix = createMatrix();
+
+    const scale = this.scale;
+    const x = this.x;
+    const y = this.y;
+
+    console.log('Translate (panX, panY)', panX, panY);
+    matrix = matrix.translate(panX, panY);
+    this._applyMatrix(matrix, allowChangeEvent);
+    await this._sleep(600);
+
+    console.log('Translate (originX, originX)', originX, originX);
+    matrix = matrix.translate(originX, originY);
+    this._applyMatrix(matrix, allowChangeEvent);
+    await this._sleep(600);
+
+    console.log('Translate (x, y)', x, y);
+    matrix = matrix.translate(x, y);
+    this._applyMatrix(matrix, allowChangeEvent);
+    await this._sleep(600);
+
+    console.log('Scale (scaleDiff)', scaleDiff);
+    matrix = matrix.scale(scaleDiff);
+    this._applyMatrix(matrix, allowChangeEvent);
+    await this._sleep(600);
+
+    console.log('Translate (-originX, -originX)', -originX, -originX);
+    matrix = matrix.translate(-originX, -originY);
+    this._applyMatrix(matrix, allowChangeEvent);
+    await this._sleep(600);
+
+    console.log('Scale (scale)', scale);
+    matrix = matrix.scale(scale);
+    this._applyMatrix(matrix, allowChangeEvent);
+    await this._sleep(600);
+
+    /*
+    matrix = matrix.scale(scale);
+    this._applyMatrix(matrix, allowChangeEvent);
+    await this._sleep(1500);
+
+    matrix = matrix.translate(-originX, -originY);
+    this._applyMatrix(matrix, allowChangeEvent);
+    await this._sleep(1500);
+
+    matrix = matrix.scale(scaleDiff);
+    this._applyMatrix(matrix, allowChangeEvent);
+    await this._sleep(1500);
+
+    matrix = matrix.translate(x, y);
+    this._applyMatrix(matrix, allowChangeEvent);
+    await this._sleep(1500);
+
+    matrix = matrix.translate(originX, originY);
+    this._applyMatrix(matrix, allowChangeEvent);
+    await this._sleep(1500);
+
+    matrix = matrix.translate(panX, panY);
+    this._applyMatrix(matrix, allowChangeEvent);
+    await this._sleep(1500);
+    */
+
+    /*
       // Translate according to panning.
       .translate(panX, panY)
       // Scale about the origin.
@@ -387,12 +449,22 @@ export default class PinchZoom extends HTMLElement {
       // Apply current scale.
       .scale(this.scale);
 
+     */
+
     // Convert the transform into basic translate & scale.
+
+  }
+
+  private _applyMatrix(matrix: SVGMatrix, allowChangeEvent = false): void {
     this.setTransform({
       allowChangeEvent,
       scale: matrix.a,
       x: matrix.e,
       y: matrix.f,
     });
+  }
+
+  private _sleep(ms: number): void {
+    console.log('TEST');
   }
 }
