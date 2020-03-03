@@ -31,6 +31,7 @@ var css = "pinch-zoom {\n  display: block;\n  overflow: hidden;\n  touch-action:
 styleInject(css);
 
 const minScaleAttr = 'min-scale';
+const maxScaleAttr = 'max-scale';
 function getDistance(a, b) {
     if (!b)
         return 0;
@@ -65,6 +66,7 @@ function createPoint() {
     return getSVG().createSVGPoint();
 }
 const MIN_SCALE = 0.01;
+const MAX_SCALE = 999;
 class PinchZoom extends HTMLElement {
     constructor() {
         super();
@@ -90,11 +92,16 @@ class PinchZoom extends HTMLElement {
         });
         this.addEventListener('wheel', event => this._onWheel(event));
     }
-    static get observedAttributes() { return [minScaleAttr]; }
+    static get observedAttributes() { return [minScaleAttr, maxScaleAttr]; }
     async attributeChangedCallback(name, oldValue, newValue) {
         if (name === minScaleAttr) {
             if (this.scale < this.minScale) {
                 this.setTransform({ scale: this.minScale });
+            }
+        }
+        if (name === maxScaleAttr) {
+            if (this.scale > this.maxScale) {
+                this.setTransform({ scale: this.maxScale });
             }
         }
     }
@@ -109,6 +116,18 @@ class PinchZoom extends HTMLElement {
     }
     set minScale(value) {
         this.setAttribute(minScaleAttr, String(value));
+    }
+    get maxScale() {
+        const attrValue = this.getAttribute(maxScaleAttr);
+        if (!attrValue)
+            return MAX_SCALE;
+        const value = parseFloat(attrValue);
+        if (Number.isFinite(value))
+            return Math.max(MAX_SCALE, value);
+        return MAX_SCALE;
+    }
+    set maxScale(value) {
+        this.setAttribute(maxScaleAttr, String(value));
     }
     connectedCallback() {
         this._stageElChange();
@@ -140,12 +159,12 @@ class PinchZoom extends HTMLElement {
         if (relativeTo === 'content') {
             originX += this.x;
             originY += this.y;
-        }
-        else {
-            const currentRect = this._positioningEl.getBoundingClientRect();
-            originX -= currentRect.left;
-            originY -= currentRect.top;
-        }
+        } /*else {
+          const currentRect = this._positioningEl.getBoundingClientRect();
+          originX -= currentRect.left;
+          originY -= currentRect.top;
+        }*/
+        console.log('Origin: ', originX, originY);
         this._applyChange({
             allowChangeEvent,
             originX,
@@ -210,17 +229,22 @@ class PinchZoom extends HTMLElement {
      * Update transform values without checking bounds. This is only called in setTransform.
      */
     _updateTransform(scale, x, y, allowChangeEvent) {
+        let newScale = scale;
         // Avoid scaling to zero
-        if (scale < this.minScale)
-            return;
+        if (newScale < this.minScale) {
+            newScale = this.minScale;
+        }
+        if (newScale > this.maxScale) {
+            newScale = this.maxScale;
+        }
         // Return if there's no change
-        if (scale === this.scale &&
+        if (newScale === this.scale &&
             x === this.x &&
             y === this.y)
             return;
         this._transform.e = x;
         this._transform.f = y;
-        this._transform.d = this._transform.a = scale;
+        this._transform.d = this._transform.a = newScale;
         this.style.setProperty('--x', this.x + 'px');
         this.style.setProperty('--y', this.y + 'px');
         this.style.setProperty('--scale', this.scale + '');
@@ -292,34 +316,43 @@ class PinchZoom extends HTMLElement {
     /** Transform the view & fire a change event */
     async _applyChange(opts = {}) {
         const { panX = 0, panY = 0, originX = 0, originY = 0, scaleDiff = 1, allowChangeEvent = false, } = opts;
+        /*
         let matrix = createMatrix();
+    
         const scale = this.scale;
         const x = this.x;
         const y = this.y;
+    
         console.log('Translate (panX, panY)', panX, panY);
         matrix = matrix.translate(panX, panY);
         this._applyMatrix(matrix, allowChangeEvent);
         await this._sleep(600);
+    
         console.log('Translate (originX, originX)', originX, originX);
         matrix = matrix.translate(originX, originY);
         this._applyMatrix(matrix, allowChangeEvent);
         await this._sleep(600);
+    
         console.log('Translate (x, y)', x, y);
         matrix = matrix.translate(x, y);
         this._applyMatrix(matrix, allowChangeEvent);
         await this._sleep(600);
+    
         console.log('Scale (scaleDiff)', scaleDiff);
         matrix = matrix.scale(scaleDiff);
         this._applyMatrix(matrix, allowChangeEvent);
         await this._sleep(600);
-        console.log('Translate (-originX, -originX)', -originX, -originX);
+    
+        console.log('Translate (-originX, -originY)', -originX, -originY);
         matrix = matrix.translate(-originX, -originY);
         this._applyMatrix(matrix, allowChangeEvent);
         await this._sleep(600);
+    
         console.log('Scale (scale)', scale);
         matrix = matrix.scale(scale);
         this._applyMatrix(matrix, allowChangeEvent);
         await this._sleep(600);
+        */
         /*
         matrix = matrix.scale(scale);
         this._applyMatrix(matrix, allowChangeEvent);
@@ -345,20 +378,21 @@ class PinchZoom extends HTMLElement {
         this._applyMatrix(matrix, allowChangeEvent);
         await this._sleep(1500);
         */
-        /*
-          // Translate according to panning.
-          .translate(panX, panY)
-          // Scale about the origin.
-          .translate(originX, originY)
-          // Apply current translate
-          .translate(this.x, this.y)
-          .scale(scaleDiff)
-          .translate(-originX, -originY)
-          // Apply current scale.
-          .scale(this.scale);
-    
-         */
+        this.resetPoints();
+        this.draw(originX, originY);
+        // Translate according to panning.
+        const matrix = createMatrix()
+            .translate(panX, panY)
+            // Scale about the origin.
+            .translate(originX, originY)
+            // Apply current translate
+            .translate(this.x, this.y)
+            .scale(scaleDiff)
+            .translate(-originX, -originY)
+            // Apply current scale.
+            .scale(this.scale);
         // Convert the transform into basic translate & scale.
+        this._applyMatrix(matrix, allowChangeEvent);
     }
     _applyMatrix(matrix, allowChangeEvent = false) {
         this.setTransform({
@@ -368,8 +402,31 @@ class PinchZoom extends HTMLElement {
             y: matrix.f,
         });
     }
-    _sleep(ms) {
-        console.log('TEST');
+    /*
+    private _sleep(ms: number): void {
+      // console.log('TEST');
+    }
+    */
+    draw(x, y, color = 'red') {
+        const newDiv = document.createElement('div');
+        newDiv.classList.add('point');
+        newDiv.style.width = '4px';
+        newDiv.style.height = '4px';
+        newDiv.style.backgroundColor = color;
+        newDiv.style.position = 'fixed';
+        newDiv.style.left = x - 2 + 'px';
+        newDiv.style.top = y - 2 + 'px';
+        document.body.append(newDiv);
+        return newDiv;
+    }
+    removeElementsByClass(className) {
+        const elements = document.getElementsByClassName(className);
+        while (elements.length > 0) {
+            elements[0].parentNode.removeChild(elements[0]);
+        }
+    }
+    resetPoints() {
+        this.removeElementsByClass('point');
     }
 }
 

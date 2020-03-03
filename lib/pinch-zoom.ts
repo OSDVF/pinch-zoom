@@ -30,6 +30,7 @@ interface SetTransformOpts extends ChangeOptions {
 type ScaleRelativeToValues = 'container' | 'content';
 
 const minScaleAttr = 'min-scale';
+const maxScaleAttr = 'max-scale';
 
 export interface ScaleToOpts extends ChangeOptions {
   /** Transform origin. Can be a number, or string percent, eg "50%" */
@@ -80,6 +81,7 @@ function createPoint(): SVGPoint {
 }
 
 const MIN_SCALE = 0.01;
+const MAX_SCALE = 999;
 
 export default class PinchZoom extends HTMLElement {
   // The element that we'll transform.
@@ -89,7 +91,7 @@ export default class PinchZoom extends HTMLElement {
   // Current transform.
   private _transform: SVGMatrix = createMatrix();
 
-  static get observedAttributes() { return [minScaleAttr]; }
+  static get observedAttributes() { return [minScaleAttr, maxScaleAttr]; }
 
   constructor() {
     super();
@@ -122,6 +124,11 @@ export default class PinchZoom extends HTMLElement {
         this.setTransform({ scale: this.minScale });
       }
     }
+    if (name === maxScaleAttr) {
+      if (this.scale > this.maxScale) {
+        this.setTransform({ scale: this.maxScale });
+      }
+    }
   }
 
   get minScale(): number {
@@ -136,6 +143,20 @@ export default class PinchZoom extends HTMLElement {
 
   set minScale(value: number) {
     this.setAttribute(minScaleAttr, String(value));
+  }
+
+  get maxScale(): number {
+    const attrValue = this.getAttribute(maxScaleAttr);
+    if (!attrValue) return MAX_SCALE;
+
+    const value = parseFloat(attrValue);
+    if (Number.isFinite(value)) return Math.max(MAX_SCALE, value);
+
+    return MAX_SCALE;
+  }
+
+  set maxScale(value: number) {
+    this.setAttribute(maxScaleAttr, String(value));
   }
 
   connectedCallback() {
@@ -183,11 +204,13 @@ export default class PinchZoom extends HTMLElement {
     if (relativeTo === 'content') {
       originX += this.x;
       originY += this.y;
-    } else {
+    } /*else {
       const currentRect = this._positioningEl.getBoundingClientRect();
       originX -= currentRect.left;
       originY -= currentRect.top;
-    }
+    }*/
+
+    console.log('Origin: ', originX, originY);
 
     this._applyChange({
       allowChangeEvent,
@@ -269,19 +292,26 @@ export default class PinchZoom extends HTMLElement {
    * Update transform values without checking bounds. This is only called in setTransform.
    */
   private _updateTransform(scale: number, x: number, y: number, allowChangeEvent: boolean) {
+    let newScale = scale;
+
     // Avoid scaling to zero
-    if (scale < this.minScale) return;
+    if (newScale < this.minScale) {
+      newScale = this.minScale;
+    }
+    if (newScale > this.maxScale) {
+      newScale = this.maxScale;
+    }
 
     // Return if there's no change
     if (
-      scale === this.scale &&
+      newScale === this.scale &&
       x === this.x &&
       y === this.y
     ) return;
 
     this._transform.e = x;
     this._transform.f = y;
-    this._transform.d = this._transform.a = scale;
+    this._transform.d = this._transform.a = newScale;
 
     this.style.setProperty('--x', this.x + 'px');
     this.style.setProperty('--y', this.y + 'px');
@@ -375,6 +405,7 @@ export default class PinchZoom extends HTMLElement {
       allowChangeEvent = false,
     } = opts;
 
+    /*
     let matrix = createMatrix();
 
     const scale = this.scale;
@@ -401,7 +432,7 @@ export default class PinchZoom extends HTMLElement {
     this._applyMatrix(matrix, allowChangeEvent);
     await this._sleep(600);
 
-    console.log('Translate (-originX, -originX)', -originX, -originX);
+    console.log('Translate (-originX, -originY)', -originX, -originY);
     matrix = matrix.translate(-originX, -originY);
     this._applyMatrix(matrix, allowChangeEvent);
     await this._sleep(600);
@@ -410,6 +441,7 @@ export default class PinchZoom extends HTMLElement {
     matrix = matrix.scale(scale);
     this._applyMatrix(matrix, allowChangeEvent);
     await this._sleep(600);
+    */
 
     /*
     matrix = matrix.scale(scale);
@@ -437,8 +469,11 @@ export default class PinchZoom extends HTMLElement {
     await this._sleep(1500);
     */
 
-    /*
+    this.resetPoints();
+    this.draw(originX, originY);
+
       // Translate according to panning.
+    const matrix = createMatrix()
       .translate(panX, panY)
       // Scale about the origin.
       .translate(originX, originY)
@@ -449,10 +484,8 @@ export default class PinchZoom extends HTMLElement {
       // Apply current scale.
       .scale(this.scale);
 
-     */
-
     // Convert the transform into basic translate & scale.
-
+    this._applyMatrix(matrix, allowChangeEvent);
   }
 
   private _applyMatrix(matrix: SVGMatrix, allowChangeEvent = false): void {
@@ -464,7 +497,39 @@ export default class PinchZoom extends HTMLElement {
     });
   }
 
+  /*
   private _sleep(ms: number): void {
-    console.log('TEST');
+    // console.log('TEST');
+  }
+  */
+
+  private draw(x: number, y: number, color = 'red'): HTMLDivElement {
+    const newDiv = document.createElement('div');
+
+    newDiv.classList.add('point');
+
+    newDiv.style.width = '4px';
+    newDiv.style.height = '4px';
+
+    newDiv.style.backgroundColor = color;
+
+    newDiv.style.position = 'fixed';
+    newDiv.style.left = x - 2 + 'px';
+    newDiv.style.top = y - 2 + 'px';
+
+    document.body.append(newDiv);
+
+    return newDiv;
+  }
+
+  private removeElementsByClass(className: string): void {
+    const elements = document.getElementsByClassName(className);
+    while (elements.length > 0) {
+      (elements[0].parentNode as any).removeChild(elements[0]);
+    }
+  }
+
+  private resetPoints(): void {
+    this.removeElementsByClass('point');
   }
 }
