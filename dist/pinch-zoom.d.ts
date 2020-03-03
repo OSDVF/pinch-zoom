@@ -55,6 +55,7 @@ export default class PinchZoom extends HTMLElement {
     /** Transform the view & fire a change event */
     private _applyChange;
     private _applyMatrix;
+    private drawRect;
     private draw;
     private removeElementsByClass;
     private resetPoints;
