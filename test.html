@@ -24,6 +24,8 @@
 
             background-color: blueviolet;
             height: 100%;
+
+            margin: 0;
         }
 
         .input-container {
@@ -47,7 +49,8 @@
             width: 400px;
             height: 600px;
 
-            margin-left: 100px;
+            margin-left: 200px;
+            margin-top: 200px;
         }
 
         .vertical-line {
@@ -72,10 +75,6 @@
     </style>
 </head>
 <body>
-<div class="input-container">
-    <button id="reset">Reset</button>
-    <button id="zoom">Zoom</button>
-</div>
 
 <div class="container" id="container">
     <pinch-zoom id="pinch-zoom">
@@ -85,14 +84,29 @@
     <div class=horizontal-line></div>
 </div>
 
+<div class="input-container">
+    <button id="reset">Reset</button>
+    <button id="zoom-in">Zoom IN</button>
+    <button id="zoom-out">Zoom OUT</button>
+    <button id="zoom-low">Zoom 0.3</button>
+    <button id="zoom-high">Zoom 1.2</button>
+</div>
+
 <script>
     let reset = document.getElementById('reset');
-    let zoom = document.getElementById('zoom');
+    let zoomIn = document.getElementById('zoom-in');
+    let zoomOut = document.getElementById('zoom-out');
+
+    let zoomLow = document.getElementById('zoom-low');
+    let zoomHigh = document.getElementById('zoom-high');
 
     let image = document.getElementById('image');
     let container = document.getElementById('container');
 
     let pinchZoom = document.getElementById('pinch-zoom');
+
+    pinchZoom.minScale = 0.9;
+    pinchZoom.maxScale = 5;
 
     function removeElementsByClass(className){
         const elements = document.getElementsByClassName(className);
@@ -105,7 +119,7 @@
         removeElementsByClass('point');
     }
 
-    function draw(x, y) {
+    function draw(x, y, color) {
         var newDiv = document.createElement("div");
 
         newDiv.classList.add('point');
@@ -113,7 +127,7 @@
         newDiv.style.width = '4px';
         newDiv.style.height = '4px';
 
-        newDiv.style.backgroundColor = 'red';
+        newDiv.style.backgroundColor = color || 'red';
 
         newDiv.style.position = 'fixed';
         newDiv.style.left = x - 2 + 'px';
@@ -135,10 +149,47 @@
         });
     });
 
-    zoom.addEventListener('click', () => {
+    zoomIn.addEventListener('click', () => {
         zoomLevel++;
         pinchZoom.scaleTo(
             zoomLevel,
+            {
+                originX: 200,
+                originY: 300,
+                relativeTo: 'container',
+                allowChangeEvent: true
+            }
+        );
+    });
+
+    zoomOut.addEventListener('click', () => {
+        zoomLevel = Math.max(zoomLevel - 0.5, 0.5);
+        pinchZoom.scaleTo(
+            zoomLevel,
+            {
+                originX: 200,
+                originY: 300,
+                relativeTo: 'container',
+                allowChangeEvent: true
+            }
+        );
+    });
+
+    zoomLow.addEventListener('click', () => {
+        pinchZoom.scaleTo(
+            0.3,
+            {
+                originX: 200,
+                originY: 300,
+                relativeTo: 'container',
+                allowChangeEvent: true
+            }
+        );
+    });
+
+    zoomHigh.addEventListener('click', () => {
+        pinchZoom.scaleTo(
+            2.2,
             {
                 originX: 200,
                 originY: 300,

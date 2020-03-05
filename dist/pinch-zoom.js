@@ -257,7 +257,6 @@ var PinchZoom = (function () {
             super();
             // Current transform.
             this._transform = createMatrix();
-            this.resetPoints();
             // Watch for children changes.
             // Note this won't fire for initial contents,
             // so _stageElChange is also called in connectedCallback.
@@ -309,7 +308,7 @@ var PinchZoom = (function () {
                 return MAX_SCALE;
             const value = parseFloat(attrValue);
             if (Number.isFinite(value))
-                return Math.max(MAX_SCALE, value);
+                return Math.min(MAX_SCALE, value);
             return MAX_SCALE;
         }
         set maxScale(value) {
@@ -334,8 +333,6 @@ var PinchZoom = (function () {
             let { originX = 0, originY = 0, } = opts;
             const { relativeTo = 'content', allowChangeEvent = false, } = opts;
             const relativeToEl = (relativeTo === 'content' ? this._positioningEl : this);
-            const scaleDiff = scale / this.scale;
-            console.log('scaleDiff: ', scaleDiff);
             // No content element? Fall back to just setting scale
             if (!relativeToEl || !this._positioningEl) {
                 this.setTransform({ scale, allowChangeEvent });
@@ -351,20 +348,14 @@ var PinchZoom = (function () {
             else {
                 const currentRect = this._positioningEl.getBoundingClientRect();
                 const containerRect = this.getBoundingClientRect();
-                this.resetPoints();
-                this.draw(originX, originY, 'orange');
-                this.drawRect(currentRect, 'orange');
                 originX -= currentRect.left - containerRect.left;
                 originY -= currentRect.top - containerRect.top;
-                console.log('Origin: ', originX, originY);
-                // this.drawRect2(currentRect.left / scaleDiff, currentRect.top / scaleDiff, currentRect.width, currentRect.height, 'green');
-                this.draw(originX, originY, 'green');
             }
             this._applyChange({
                 allowChangeEvent,
                 originX,
                 originY,
-                scaleDiff,
+                scaleDiff: scale / this.scale,
             });
         }
         /**
@@ -428,10 +419,31 @@ var PinchZoom = (function () {
             // Avoid scaling to zero
             if (newScale < this.minScale) {
                 newScale = this.minScale;
+                const xyDist = Math.sqrt(Math.pow(x - this.x, 2) + Math.pow(y - this.y, 2));
+                const xnDist = (xyDist / newScale) * scale;
+                const factor = xnDist / xyDist;
+                x = this.x + factor * (x - this.x);
+                y = this.y + factor * (y - this.y);
             }
             if (newScale > this.maxScale) {
                 newScale = this.maxScale;
+                /*const scaleDiff = (scale / this.scale);
+                const xyDist = Math.sqrt(Math.pow(x - this.x, 2) + Math.pow(y - this.y, 2));
+                const k = xyDist / scaleDiff;
+                const newScaleDiff = (newScale / this.scale);
+                const an = newScaleDiff * k;
+                const factor = an / xyDist;*/
+                /*const xyDist = Math.sqrt(Math.pow(x - this.x, 2) + Math.pow(y - this.y, 2));
+                const xnDist = newScale * (xyDist / scale);
+                const newDistFactor = xnDist / xyDist;*/
+                const xyDist = Math.sqrt(Math.pow(x - this.x, 2) + Math.pow(y - this.y, 2));
+                const xnDist = (xyDist / newScale) * scale;
+                const factor = xnDist / xyDist;
+                x = this.x + factor * (x - this.x);
+                y = this.y + factor * (y - this.y);
             }
+            // Round
+            newScale = Math.round((newScale + Number.EPSILON) * 100) / 100;
             // Return if there's no change
             if (newScale === this.scale &&
                 x === this.x &&
@@ -479,7 +491,6 @@ var PinchZoom = (function () {
             // ctrlKey is true when pinch-zooming on a trackpad.
             const divisor = ctrlKey ? 100 : 300;
             const scaleDiff = 1 - deltaY / divisor;
-            console.log('Wheel', event.clientX - currentRect.left, event.clientY - currentRect.top);
             this._applyChange({
                 scaleDiff,
                 originX: event.clientX - currentRect.left,
@@ -502,11 +513,6 @@ var PinchZoom = (function () {
             const prevDistance = getDistance(previousPointers[0], previousPointers[1]);
             const newDistance = getDistance(currentPointers[0], currentPointers[1]);
             const scaleDiff = prevDistance ? newDistance / prevDistance : 1;
-            console.log('PointerMove', originX, originY);
-            /*this.resetPoints();
-            this.drawRect(currentRect, 'orange');
-            this.draw(newMidpoint.clientX, newMidpoint.clientY, 'orange');
-            this.draw(originX, originY, 'green');*/
             this._applyChange({
                 originX, originY, scaleDiff,
                 panX: newMidpoint.clientX - prevMidpoint.clientX,
@@ -515,76 +521,10 @@ var PinchZoom = (function () {
             });
         }
         /** Transform the view & fire a change event */
-        async _applyChange(opts = {}) {
+        _applyChange(opts = {}) {
             const { panX = 0, panY = 0, originX = 0, originY = 0, scaleDiff = 1, allowChangeEvent = false, } = opts;
-            /*
-            let matrix = createMatrix();
-        
-            const scale = this.scale;
-            const x = this.x;
-            const y = this.y;
-        
-            console.log('Translate (panX, panY)', panX, panY);
-            matrix = matrix.translate(panX, panY);
-            this._applyMatrix(matrix, allowChangeEvent);
-            await this._sleep(600);
-        
-            console.log('Translate (originX, originX)', originX, originX);
-            matrix = matrix.translate(originX, originY);
-            this._applyMatrix(matrix, allowChangeEvent);
-            await this._sleep(600);
-        
-            console.log('Translate (x, y)', x, y);
-            matrix = matrix.translate(x, y);
-            this._applyMatrix(matrix, allowChangeEvent);
-            await this._sleep(600);
-        
-            console.log('Scale (scaleDiff)', scaleDiff);
-            matrix = matrix.scale(scaleDiff);
-            this._applyMatrix(matrix, allowChangeEvent);
-            await this._sleep(600);
-        
-            console.log('Translate (-originX, -originY)', -originX, -originY);
-            matrix = matrix.translate(-originX, -originY);
-            this._applyMatrix(matrix, allowChangeEvent);
-            await this._sleep(600);
-        
-            console.log('Scale (scale)', scale);
-            matrix = matrix.scale(scale);
-            this._applyMatrix(matrix, allowChangeEvent);
-            await this._sleep(600);
-            */
-            /*
-            matrix = matrix.scale(scale);
-            this._applyMatrix(matrix, allowChangeEvent);
-            await this._sleep(1500);
-        
-            matrix = matrix.translate(-originX, -originY);
-            this._applyMatrix(matrix, allowChangeEvent);
-            await this._sleep(1500);
-        
-            matrix = matrix.scale(scaleDiff);
-            this._applyMatrix(matrix, allowChangeEvent);
-            await this._sleep(1500);
-        
-            matrix = matrix.translate(x, y);
-            this._applyMatrix(matrix, allowChangeEvent);
-            await this._sleep(1500);
-        
-            matrix = matrix.translate(originX, originY);
-            this._applyMatrix(matrix, allowChangeEvent);
-            await this._sleep(1500);
-        
-            matrix = matrix.translate(panX, panY);
-            this._applyMatrix(matrix, allowChangeEvent);
-            await this._sleep(1500);
-            */
-            // this.resetPoints();
-            /*    this.draw(panX, panY, 'green');
-                this.draw(originX, originY);
-                this.draw(this.x, this.y, 'pink');*/
-            // Translate according to panning.
             const matrix = createMatrix()
+                // Translate according to panning.
                 .translate(panX, panY)
                 // Scale about the origin.
                 .translate(originX, originY)
@@ -595,82 +535,12 @@ var PinchZoom = (function () {
                 // Apply current scale.
                 .scale(this.scale);
             // Convert the transform into basic translate & scale.
-            this._applyMatrix(matrix, allowChangeEvent);
-        }
-        _applyMatrix(matrix, allowChangeEvent = false) {
             this.setTransform({
                 allowChangeEvent,
                 scale: matrix.a,
                 x: matrix.e,
                 y: matrix.f,
             });
-        }
-        /*
-        private _sleep(ms: number): void {
-          // console.log('TEST');
-        }
-        */
-        /*
-        private drawRect2(left: number, top: number, width: number, height: number, color = 'red'): HTMLDivElement {
-          const newDiv = document.createElement('div');
-      
-          newDiv.classList.add('point');
-      
-          newDiv.style.borderColor = color;
-          newDiv.style.borderWidth = '1px';
-          newDiv.style.borderStyle = 'solid';
-      
-          newDiv.style.position = 'fixed';
-      
-          newDiv.style.width = width + 'px';
-          newDiv.style.height = height + 'px';
-      
-          newDiv.style.left = left + 'px';
-          newDiv.style.top = top + 'px';
-      
-          document.body.append(newDiv);
-      
-          console.log('Draw rectangle ' + color + ' at ', left, top, width, height);
-      
-          return newDiv;
-        }
-         */
-        drawRect(rect, color = 'red') {
-            const newDiv = document.createElement('div');
-            newDiv.classList.add('point');
-            newDiv.style.borderColor = color;
-            newDiv.style.borderWidth = '1px';
-            newDiv.style.borderStyle = 'solid';
-            newDiv.style.position = 'fixed';
-            newDiv.style.width = rect.width + 'px';
-            newDiv.style.height = rect.height + 'px';
-            newDiv.style.left = rect.left + 'px';
-            newDiv.style.top = rect.top + 'px';
-            document.body.append(newDiv);
-            console.log('Draw rectangle ' + color + ' at ', rect);
-            return newDiv;
-        }
-        draw(x, y, color = 'red') {
-            const newDiv = document.createElement('div');
-            newDiv.classList.add('point');
-            newDiv.style.width = '4px';
-            newDiv.style.height = '4px';
-            newDiv.style.backgroundColor = color;
-            newDiv.style.position = 'fixed';
-            newDiv.style.left = x - 2 + 'px';
-            newDiv.style.top = y - 2 + 'px';
-            document.body.append(newDiv);
-            console.log('Draw point ' + color + ' at ', x, y);
-            return newDiv;
-        }
-        removeElementsByClass(className) {
-            const elements = document.getElementsByClassName(className);
-            while (elements.length > 0) {
-                elements[0].parentNode.removeChild(elements[0]);
-            }
-        }
-        resetPoints() {
-            this.removeElementsByClass('point');
         }
     }
 
