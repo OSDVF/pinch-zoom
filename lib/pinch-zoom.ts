@@ -86,10 +86,10 @@ function createPoint(): SVGPoint {
 
 const MIN_SCALE = 0.01;
 const MAX_SCALE = 999;
-const MAX_Y = 1000;
-const MIN_Y = -1000;
-const MAX_X = 1000;
-const MIN_X = -1000;
+const MAX_Y = Infinity;
+const MIN_Y = -Infinity
+const MAX_X = Infinity;
+const MIN_X = -Infinity;
 
 export default class PinchZoom extends HTMLElement {
   // The element that we'll transform.
@@ -224,19 +224,19 @@ export default class PinchZoom extends HTMLElement {
   }
   get proportionalMinY()
   {
-    return this.minY / Math.min(this.scale, 1);
+    return this.minY * this.scale;
   }
   get proportionalMaxY()
   {
-    return this.maxY / Math.min(this.scale, 1);
+    return this.maxY * this.scale;
   }
   get proportionalMinX()
   {
-    return this.minX / Math.min(this.scale, 1);
+    return this.minX * this.scale;
   }
   get proportionalMaxX()
   {
-    return this.maxX / Math.min(this.scale, 1);
+    return this.maxX * this.scale;
   }
 
   set minY(value: number) {
