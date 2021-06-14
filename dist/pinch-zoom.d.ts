@@ -27,6 +27,10 @@ export default class PinchZoom extends HTMLElement {
     attributeChangedCallback(name: string, oldValue: string, newValue: string): Promise<void>;
     minScale: number;
     maxScale: number;
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
     connectedCallback(): void;
     readonly x: number;
     readonly y: number;

@@ -1,11 +1,12 @@
 # <pinch-zoom>
 
 A web component for pinch zooming DOM elements.
+With min-scale, max-scale, min-x, max-x, min-y and max-y
 
 ## Usage
 
 ```sh
-npm install --save-dev pinch-zoom-element
+npm install --save-dev https://github.com/OSDVF/pinch-zoom
 ```
 
 ```html

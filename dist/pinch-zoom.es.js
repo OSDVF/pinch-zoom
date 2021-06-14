@@ -32,6 +32,10 @@ styleInject(css);
 
 const minScaleAttr = 'min-scale';
 const maxScaleAttr = 'max-scale';
+const minYAttr = 'min-y';
+const maxYAttr = 'max-y';
+const minXAttr = 'min-x';
+const maxXAttr = 'max-x';
 function getDistance(a, b) {
     if (!b)
         return 0;
@@ -67,6 +71,10 @@ function createPoint() {
 }
 const MIN_SCALE = 0.01;
 const MAX_SCALE = 999;
+const MAX_Y = 1000;
+const MIN_Y = -1000;
+const MAX_X = 1000;
+const MIN_X = -1000;
 class PinchZoom extends HTMLElement {
     constructor() {
         super();
@@ -92,7 +100,7 @@ class PinchZoom extends HTMLElement {
         });
         this.addEventListener('wheel', event => this._onWheel(event));
     }
-    static get observedAttributes() { return [minScaleAttr, maxScaleAttr]; }
+    static get observedAttributes() { return [minScaleAttr, maxScaleAttr, minYAttr, maxYAttr, minXAttr, maxXAttr]; }
     async attributeChangedCallback(name, oldValue, newValue) {
         if (name === minScaleAttr) {
             if (this.scale < this.minScale) {
@@ -102,6 +110,26 @@ class PinchZoom extends HTMLElement {
         if (name === maxScaleAttr) {
             if (this.scale > this.maxScale) {
                 this.setTransform({ scale: this.maxScale });
+            }
+        }
+        if (name === minYAttr) {
+            if (this.y < this.minY) {
+                this.setTransform({ y: this.minY });
+            }
+        }
+        if (name === maxYAttr) {
+            if (this.y > this.maxY) {
+                this.setTransform({ y: this.maxY });
+            }
+        }
+        if (name === minXAttr) {
+            if (this.x < this.minX) {
+                this.setTransform({ y: this.minX });
+            }
+        }
+        if (name === maxYAttr) {
+            if (this.x > this.maxX) {
+                this.setTransform({ y: this.maxX });
             }
         }
     }
@@ -128,6 +156,54 @@ class PinchZoom extends HTMLElement {
     }
     set maxScale(value) {
         this.setAttribute(maxScaleAttr, String(value));
+    }
+    get minX() {
+        const attrValue = this.getAttribute(minXAttr);
+        if (!attrValue)
+            return MIN_X;
+        const value = parseFloat(attrValue);
+        if (Number.isFinite(value))
+            return Math.max(MIN_X, value);
+        return MIN_X;
+    }
+    set minX(value) {
+        this.setAttribute(minXAttr, String(value));
+    }
+    get maxX() {
+        const attrValue = this.getAttribute(maxXAttr);
+        if (!attrValue)
+            return MAX_X;
+        const value = parseFloat(attrValue);
+        if (Number.isFinite(value))
+            return Math.min(MAX_X, value);
+        return MAX_X;
+    }
+    set maxX(value) {
+        this.setAttribute(maxXAttr, String(value));
+    }
+    get minY() {
+        const attrValue = this.getAttribute(minYAttr);
+        if (!attrValue)
+            return MIN_Y;
+        const value = parseFloat(attrValue);
+        if (Number.isFinite(value))
+            return Math.max(MIN_Y, value);
+        return MIN_Y;
+    }
+    set minY(value) {
+        this.setAttribute(minYAttr, String(value));
+    }
+    get maxY() {
+        const attrValue = this.getAttribute(maxYAttr);
+        if (!attrValue)
+            return MAX_Y;
+        const value = parseFloat(attrValue);
+        if (Number.isFinite(value))
+            return Math.min(MAX_Y, value);
+        return MAX_Y;
+    }
+    set maxY(value) {
+        this.setAttribute(maxYAttr, String(value));
     }
     connectedCallback() {
         this._stageElChange();
@@ -244,6 +320,19 @@ class PinchZoom extends HTMLElement {
             return;
         }
         if (newScale > this.maxScale) {
+            return;
+        }
+        // Avoid translating outside bounds
+        if (y < this.minY) {
+            return;
+        }
+        if (y > this.maxY) {
+            return;
+        }
+        if (x < this.minX) {
+            return;
+        }
+        if (x > this.maxX) {
             return;
         }
         // Return if there's no change
