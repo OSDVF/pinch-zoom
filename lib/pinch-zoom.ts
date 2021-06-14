@@ -138,23 +138,23 @@ export default class PinchZoom extends HTMLElement {
       }
     }
     if (name === minYAttr) {
-      if (this.y < this.minY) {
-        this.setTransform({ y: this.minY });
+      if (this.y < this.proportionalMinY) {
+        this.setTransform({ y: this.proportionalMinY});
       }
     }
     if (name === maxYAttr) {
-      if (this.y > this.maxY) {
-        this.setTransform({ y: this.maxY });
+      if (this.y > this.proportionalMaxY) {
+        this.setTransform({ y: this.proportionalMaxY});
       }
     }
     if (name === minXAttr) {
-      if (this.x < this.minX) {
-        this.setTransform({ y: this.minX });
+      if (this.x < this.proportionalMinX) {
+        this.setTransform({ y: this.proportionalMinX });
       }
     }
     if (name === maxYAttr) {
-      if (this.x > this.maxX) {
-        this.setTransform({ y: this.maxX });
+      if (this.x > this.proportionalMaxX) {
+        this.setTransform({ y: this.proportionalMaxX });
       }
     }
   }
@@ -221,6 +221,22 @@ export default class PinchZoom extends HTMLElement {
     if (Number.isFinite(value)) return Math.max(MIN_Y, value);
 
     return MIN_Y;
+  }
+  get proportionalMinY()
+  {
+    return this.minY / Math.min(this.scale, 1);
+  }
+  get proportionalMaxY()
+  {
+    return this.maxY / Math.min(this.scale, 1);
+  }
+  get proportionalMinX()
+  {
+    return this.minX / Math.min(this.scale, 1);
+  }
+  get proportionalMaxX()
+  {
+    return this.maxX / Math.min(this.scale, 1);
   }
 
   set minY(value: number) {
@@ -394,16 +410,16 @@ export default class PinchZoom extends HTMLElement {
       return;
     }
     // Avoid translating outside bounds
-    if (y < this.minY) {
+    if (y < this.proportionalMinY) {
       return;
     }
-    if (y > this.maxY) {
+    if (y > this.proportionalMaxY) {
       return;
     }
-    if (x < this.minX) {
+    if (x < this.proportionalMinX) {
       return;
     }
-    if (x > this.maxX) {
+    if (x > this.proportionalMaxX) {
       return;
     }
 

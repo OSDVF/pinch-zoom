@@ -30,6 +30,10 @@ export default class PinchZoom extends HTMLElement {
     minX: number;
     maxX: number;
     minY: number;
+    readonly proportionalMinY: number;
+    readonly proportionalMaxY: number;
+    readonly proportionalMinX: number;
+    readonly proportionalMaxX: number;
     maxY: number;
     connectedCallback(): void;
     readonly x: number;
